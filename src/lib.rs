@@ -3,21 +3,21 @@ extern crate image;
 pub mod scene;
 pub mod vector3;
 pub mod point;
-mod rendering;
+pub mod rendering;
+
+use std::fs::{File, OpenOptions};
 
 use image::*;
 use point::*;
 use scene::*;
 use rendering::*;
 
- 
-
 #[test]
 fn test_can_render_scene() {
 	let scene = Scene {
 		width: 800,
 		height: 600,
-		fov: 90.0,
+		fov: 65.0,
 		sphere: Sphere {
 			center: Point { x: 0.0, y: 0.0, z: -5.0,},
 			radius: 1.0,
@@ -28,4 +28,6 @@ fn test_can_render_scene() {
 	let img: DynamicImage = render(&scene);
 	assert_eq!(scene.width, img.width());
 	assert_eq!(scene.height, img.height());
+
+    img.save("test.png").unwrap();
 }
