@@ -1,5 +1,6 @@
 use std::ops::{Add, Sub, Mul, Neg};
 
+#[derive(Debug)]
 pub struct Vector3 {
         pub x: f64,
         pub y: f64,

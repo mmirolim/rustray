@@ -4,8 +4,10 @@ use crate::vector3::Vector3;
 use crate::rendering::{Ray, Intersectable};
 
 use image::*;
+use std::fmt;
+use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Color {
 	pub red: f32,
 	pub green: f32,
@@ -35,9 +37,24 @@ pub struct Sphere {
 	pub color: Color,
 }
 
+#[derive(Debug)]
+pub struct Plane {
+	pub center: Point,
+	pub normal: Vector3,
+	pub color: Color,
+}
+
 pub struct Scene {
         pub width: u32,
         pub height: u32,
         pub fov: f64,
-        pub spheres: Vec<Sphere>,
+        pub objects: Vec<Box<dyn Intersectable>>,
     }
+
+impl fmt::Debug for Scene {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Scene")
+    }
+}
+
+
