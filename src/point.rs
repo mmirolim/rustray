@@ -1,20 +1,24 @@
-use std::ops::{Add, Sub};
 use crate::vector3::*;
+use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Point {
-	pub x: f64,
-	pub y: f64,
-	pub z: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Point {
-	pub fn new(x: f64, y: f64, z: f64) -> Point {
-		Point{x, y, z}
-	}
-	pub fn zero() -> Point {
-		Point{x: 0.0, y: 0.0, z: 0.0}
-	}
+    pub fn new(x: f64, y: f64, z: f64) -> Point {
+        Point { x, y, z }
+    }
+    pub fn zero() -> Point {
+        Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
 }
 impl Add<Vector3> for Point {
     type Output = Point;
@@ -54,7 +58,6 @@ impl Sub<Point> for Vector3 {
     }
 }
 
-
 impl Sub<Point> for Point {
     type Output = Vector3;
 
@@ -66,4 +69,3 @@ impl Sub<Point> for Point {
         }
     }
 }
-
