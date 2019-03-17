@@ -1,6 +1,7 @@
 use std::ops::{Add, Sub};
 use crate::vector3::*;
 
+#[derive(Copy, Clone, Debug)]
 pub struct Point {
 	pub x: f64,
 	pub y: f64,

@@ -1,10 +1,11 @@
 
 use crate::point::Point;
 use crate::vector3::Vector3;
-use crate::rendering::Ray;
+use crate::rendering::{Ray, Intersectable};
 
 use image::*;
 
+#[derive(Debug)]
 pub struct Color {
 	pub red: f32,
 	pub green: f32,
@@ -27,6 +28,7 @@ impl Color {
         )
     }
 }
+#[derive(Debug)]
 pub struct Sphere {
 	pub center: Point,
 	pub radius: f64,
@@ -37,30 +39,5 @@ pub struct Scene {
         pub width: u32,
         pub height: u32,
         pub fov: f64,
-        pub sphere: Sphere,
+        pub spheres: Vec<Sphere>,
     }
-
-impl Sphere {
-	pub fn intersect(&self, ray: &Ray) -> bool {
-	let center = Point {
-            x: self.center.x,
-            y: self.center.y,
-            z: self.center.z,
-        };
-
-        let ray_origin = Point {
-        	x: ray.origin.x,
-            y: ray.origin.y,
-            z: ray.origin.z,
-        };
-		//Create a line segment between the ray origin and the center of the sphere
-        let l: Vector3 = center - ray_origin;
-        //Use l as a hypotenuse and find the length of the adjacent side
-        let adj2 = l.dot(&ray.direction);
-        //Find the length-squared of the opposite side
-        //This is equivalent to (but faster than) (l.length() * l.length()) - (adj2 * adj2)
-        let d2 = l.dot(&l) - (adj2 * adj2);
-        //If that length-squared is less than radius squared, the ray intersects the sphere
-        d2 < (self.radius * self.radius)
-	}
-}   
