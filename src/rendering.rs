@@ -14,7 +14,19 @@ pub fn render(scene: &Scene) -> DynamicImage {
 			let ray = Ray::create_prime(x, y, scene);
 
 			if let Some(v) = scene.trace(&ray) {
-				image.put_pixel(x, y, v.obj.color().to_rgba());
+				let hit_point = ray.origin + (ray.direction * v.distance);
+				let surface_normal = v.obj.surface_normal(&hit_point);
+				let direction_to_light = -scene.light.direction.normalize();
+				let light_power = (surface_normal.dot(&direction_to_light) as f32).max(0.0) * scene.light.intensity;
+				let light_reflected = v.obj.albedo() / std::f32::consts::PI;
+				let color = v.obj.color() * scene.light.color * light_power * light_reflected;
+				// clamp
+				let clamp = Color {
+            	red: color.red.min(1.0).max(0.0),
+            	blue: color.blue.min(1.0).max(0.0),
+            	green: color.green.min(1.0).max(0.0),
+        		};
+				image.put_pixel(x, y, clamp.to_rgba());
 			} else {
 				image.put_pixel(x, y, black);
 			}
@@ -27,6 +39,8 @@ pub fn render(scene: &Scene) -> DynamicImage {
 pub trait Intersectable {
 	fn intersect(&self, ray: &Ray) -> Option<f64>;
 	fn color(&self) -> Color;
+	fn surface_normal(&self, hit_point: &Point) -> Vector3;
+	fn albedo(&self) -> f32;
 }
 
 pub struct Ray {
@@ -89,6 +103,14 @@ impl Intersectable for Sphere {
 	fn color(&self) -> Color {
 		self.color
 	}
+
+	fn surface_normal(&self, hit_point: &Point) -> Vector3 {
+    	(*hit_point - self.center).normalize()
+	}
+
+	fn albedo(&self) -> f32 {
+		self.albedo
+	}
 }
 
 impl Intersectable for Plane {
@@ -109,6 +131,14 @@ impl Intersectable for Plane {
 
 	fn color(&self) -> Color {
 		self.color
+	}
+
+	fn surface_normal(&self, _hit_point: &Point) -> Vector3 {
+		-self.normal.normalize()
+	}
+
+	fn albedo(&self) -> f32 {
+		self.albedo
 	}
 }
 
