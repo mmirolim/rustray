@@ -5,7 +5,7 @@ use crate::vector3::Vector3;
 use image::*;
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::Mul;
+use std::ops::{Add, Mul};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Color {
@@ -28,6 +28,13 @@ impl Color {
             (gamma_encode(self.blue) * 255.0) as u8,
             255,
         )
+    }
+    pub fn clamp(&self) -> Color {
+        Color {
+            red: self.red.min(1.0).max(0.0),
+            blue: self.blue.min(1.0).max(0.0),
+            green: self.green.min(1.0).max(0.0),
+        }
     }
 }
 
@@ -60,6 +67,18 @@ impl Mul<Color> for f32 {
     }
 }
 
+impl Add for Color {
+    type Output = Color;
+
+    fn add(self, other: Color) -> Color {
+        Color {
+            red: self.red + other.red,
+            blue: self.blue + other.blue,
+            green: self.green + other.green,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Sphere {
     pub center: Point,
@@ -76,10 +95,25 @@ pub struct Plane {
     pub albedo: f32,
 }
 
-pub struct Light {
+pub struct DirectLight {
     pub direction: Vector3,
     pub color: Color,
     pub intensity: f32,
+}
+
+pub struct SphericalLight {
+    pub position: Point,
+    pub color: Color,
+    pub intensity: f32,
+}
+impl SphericalLight {
+    pub fn distance(&self, hit_point: &Point) -> f64 {
+        (self.position - *hit_point).length()
+    }
+}
+pub enum Light {
+    Direct(DirectLight),
+    Spherical(SphericalLight),
 }
 
 pub struct Scene {
@@ -87,7 +121,7 @@ pub struct Scene {
     pub height: u32,
     pub fov: f64,
     pub objects: Vec<Box<dyn Intersectable>>,
-    pub light: Light,
+    pub lights: Vec<Light>,
 }
 
 impl fmt::Debug for Scene {

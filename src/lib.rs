@@ -19,19 +19,47 @@ fn test_can_render_scene() {
         width: 800,
         height: 600,
         fov: 65.0,
-        light: Light {
-            color: Color {
-                red: 1.0,
-                green: 1.0,
-                blue: 1.0,
-            },
-            intensity: 8.0,
-            direction: Vector3 {
-                x: -2.0,
-                y: -2.0,
-                z: -1.0,
-            },
-        },
+        lights: vec![
+            Light::Direct(DirectLight {
+                color: Color {
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
+                },
+                intensity: 1.0,
+                direction: Vector3 {
+                    x: 3.0,
+                    y: -1.5,
+                    z: -2.0,
+                },
+            }),
+            Light::Direct(DirectLight {
+                color: Color {
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
+                },
+                intensity: 5.0,
+                direction: Vector3 {
+                    x: -3.0,
+                    y: -4.0,
+                    z: -2.0,
+                },
+            }),
+            Light::Spherical(SphericalLight {
+                color: Color {
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
+                },
+                intensity: 10.0,
+                position: Point {
+                    x: 0.0,
+                    y: 0.0,
+                    z: -2.0,
+                },
+            }),
+        ],
         objects: vec![
             Box::new(Sphere {
                 center: Point {
@@ -45,7 +73,7 @@ fn test_can_render_scene() {
                     green: 1.0,
                     blue: 0.0,
                 },
-                albedo: 0.7,
+                albedo: 0.3,
             }),
             Box::new(Sphere {
                 center: Point {
@@ -59,7 +87,7 @@ fn test_can_render_scene() {
                     green: 0.0,
                     blue: 1.0,
                 },
-                albedo: 0.98,
+                albedo: 0.7,
             }),
             Box::new(Sphere {
                 center: Point {
@@ -73,7 +101,7 @@ fn test_can_render_scene() {
                     green: 0.0,
                     blue: 0.0,
                 },
-                albedo: 0.5,
+                albedo: 0.3,
             }),
             Box::new(Plane {
                 normal: Vector3 {
@@ -91,7 +119,7 @@ fn test_can_render_scene() {
                     green: 0.5,
                     blue: 0.5,
                 },
-                albedo: 0.3,
+                albedo: 0.18,
             }),
         ],
     };

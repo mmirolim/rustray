@@ -1,5 +1,5 @@
 use crate::point::Point;
-use crate::scene::{Color, Plane, Scene, Sphere};
+use crate::scene::{Color, Light, Plane, Scene, Sphere};
 use crate::vector3::Vector3;
 use image::*;
 use std::fmt;
@@ -7,7 +7,7 @@ use std::fmt::Debug;
 
 pub fn render(scene: &Scene) -> DynamicImage {
     let mut image = DynamicImage::new_rgb8(scene.width, scene.height);
-    let black = Rgba::from_channels(0, 0, 0, 0);
+    let bg = Rgba::from_channels(125, 125, 125, 0);
 
     for x in 0..scene.width {
         for y in 0..scene.height {
@@ -16,20 +16,63 @@ pub fn render(scene: &Scene) -> DynamicImage {
             if let Some(v) = scene.trace(&ray) {
                 let hit_point = ray.origin + (ray.direction * v.distance);
                 let surface_normal = v.obj.surface_normal(&hit_point);
-                let direction_to_light = -scene.light.direction.normalize();
-                let light_power = (surface_normal.dot(&direction_to_light) as f32).max(0.0)
-                    * scene.light.intensity;
                 let light_reflected = v.obj.albedo() / std::f32::consts::PI;
-                let color = v.obj.color() * scene.light.color * light_power * light_reflected;
-                // clamp
-                let clamp = Color {
-                    red: color.red.min(1.0).max(0.0),
-                    blue: color.blue.min(1.0).max(0.0),
-                    green: color.green.min(1.0).max(0.0),
+                let mut color = Color {
+                    red: 0.0,
+                    green: 0.0,
+                    blue: 0.0,
                 };
-                image.put_pixel(x, y, clamp.to_rgba());
+                for light in &scene.lights {
+                    let light_color: Color;
+                    let direction_to_light: Vector3;
+                    let mut light_intensity: f32;
+
+                    match light {
+                        Light::Direct(light) => {
+                            light_color = light.color;
+                            light_intensity = light.intensity;
+                            direction_to_light = -light.direction.normalize();
+                        }
+
+                        Light::Spherical(light) => {
+                            light_color = light.color;
+                            let r2 = (light.position - hit_point).norm() as f32;
+                            light_intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
+                            direction_to_light = (light.position - hit_point).normalize();
+                        }
+                    };
+
+                    let shadow_ray = Ray {
+                        origin: hit_point,
+                        direction: direction_to_light,
+                    };
+                    let shadow_intersection = scene.trace(&shadow_ray);
+                    match light {
+                        Light::Direct(light) => {
+                            if shadow_intersection.is_some() {
+                                light_intensity = 0.0;
+                            }
+                        }
+
+                        Light::Spherical(light) => {
+                            if shadow_intersection.is_some()
+                                && shadow_intersection.unwrap().distance
+                                    < light.distance(&hit_point)
+                            {
+                                light_intensity = 0.0;
+                            }
+                        }
+                    };
+
+                    let light_power =
+                        (surface_normal.dot(&direction_to_light) as f32).max(0.0) * light_intensity;
+
+                    color = color + v.obj.color() * light_color * light_power * light_reflected;
+                }
+                // TODO clamp color?
+                image.put_pixel(x, y, color.clamp().to_rgba());
             } else {
-                image.put_pixel(x, y, black);
+                image.put_pixel(x, y, bg);
             }
         }
     }
@@ -81,7 +124,6 @@ impl Intersectable for Sphere {
         //Use l as a hypotenuse and find the length of the adjacent side
         let adj = l.dot(&ray.direction);
         //Find the length-squared of the opposite side
-        //This is equivalent to (but faster than) (l.length() * l.length()) - (adj2 * adj2)
         let d2 = l.dot(&l) - (adj * adj);
         //If that length-squared is less than radius squared, the ray intersects the sphere
         let radius2 = self.radius * self.radius;
