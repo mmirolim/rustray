@@ -4,12 +4,14 @@ use crate::vector3::Vector3;
 use image::*;
 use std::fmt;
 use std::fmt::Debug;
+use std::sync::{Arc, RwLock};
+use std::thread;
 
-pub fn render(scene: &Scene) -> DynamicImage {
-    let mut image = DynamicImage::new_rgb8(scene.width, scene.height);
+pub fn render(scene: &Scene, start_width: u32, end_width: u32) -> DynamicImage {
     let bg = Rgba::from_channels(125, 125, 125, 0);
-
-    for x in 0..scene.width {
+    let mut image = DynamicImage::new_rgb8(end_width - start_width, scene.height);
+    for x in start_width..end_width {
+        let x_on_image = x - start_width;
         for y in 0..scene.height {
             let ray = Ray::create_prime(x, y, scene);
 
@@ -43,7 +45,7 @@ pub fn render(scene: &Scene) -> DynamicImage {
                     };
 
                     let shadow_ray = Ray {
-                        origin: hit_point,
+                        origin: hit_point + (surface_normal * 1e-13),
                         direction: direction_to_light,
                     };
                     let shadow_intersection = scene.trace(&shadow_ray);
@@ -69,10 +71,11 @@ pub fn render(scene: &Scene) -> DynamicImage {
 
                     color = color + v.obj.color() * light_color * light_power * light_reflected;
                 }
+
                 // TODO clamp color?
-                image.put_pixel(x, y, color.clamp().to_rgba());
+                image.put_pixel(x_on_image, y, color.clamp().to_rgba());
             } else {
-                image.put_pixel(x, y, bg);
+                image.put_pixel(x_on_image, y, bg);
             }
         }
     }
@@ -188,7 +191,7 @@ impl Intersectable for Plane {
 
 pub struct Intersection<'a> {
     pub distance: f64,
-    pub obj: &'a Box<dyn Intersectable>,
+    pub obj: &'a Box<dyn Intersectable + Sync + Send>,
 }
 
 impl<'a> fmt::Debug for Intersection<'a> {
@@ -198,7 +201,7 @@ impl<'a> fmt::Debug for Intersection<'a> {
 }
 
 impl<'a> Intersection<'a> {
-    pub fn new(distance: f64, obj: &'a Box<dyn Intersectable>) -> Intersection {
+    pub fn new(distance: f64, obj: &'a Box<dyn Intersectable + Sync + Send>) -> Intersection {
         Intersection { distance, obj }
     }
 }
@@ -210,4 +213,44 @@ impl Scene {
             .filter_map(|s| s.intersect(ray).map(|d| Intersection::new(d, s)))
             .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap())
     }
+}
+
+pub fn render_in_threads(scene: Scene, threads_num: u32) -> DynamicImage {
+    let scene = Arc::new(scene);
+    let mut image = DynamicImage::new_rgb8(scene.width, scene.height);
+    let mut workers = vec![];
+    let mut images = vec![];
+    let div = scene.width % threads_num;
+    let stripe_size: u32 = if div == 0 {
+        scene.width / threads_num
+    } else {
+        scene.width / threads_num + 1
+    };
+
+    for i in 0..threads_num {
+        let scene = Arc::clone(&scene);
+        workers.push(thread::spawn(move || -> (DynamicImage, u32, u32) {
+            let start_width = i * stripe_size;
+            let end_width = if (i + 1) * stripe_size > scene.width {
+                scene.width
+            } else {
+                (i + 1) * stripe_size
+            };
+            let image = render(&scene, start_width, end_width);
+            (image, start_width, end_width)
+        }));
+    }
+
+    for worker in workers {
+        let image = worker.join().unwrap();
+        images.push(image);
+    }
+
+    for (i, v) in images.iter().enumerate() {
+        if !image.copy_from(&v.0, v.1, 0) {
+            panic!("image {} not copied", i);
+        }
+    }
+
+    image
 }

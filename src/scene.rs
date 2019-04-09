@@ -26,7 +26,7 @@ impl Color {
             (gamma_encode(self.red) * 255.0) as u8,
             (gamma_encode(self.green) * 255.0) as u8,
             (gamma_encode(self.blue) * 255.0) as u8,
-            255,
+            0,
         )
     }
     pub fn clamp(&self) -> Color {
@@ -120,7 +120,7 @@ pub struct Scene {
     pub width: u32,
     pub height: u32,
     pub fov: f64,
-    pub objects: Vec<Box<dyn Intersectable>>,
+    pub objects: Vec<Box<dyn Intersectable + Sync + Send>>,
     pub lights: Vec<Light>,
 }
 
