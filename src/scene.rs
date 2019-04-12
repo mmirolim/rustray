@@ -1,10 +1,9 @@
 use crate::point::Point;
-use crate::rendering::{Intersectable, Ray};
+use crate::rendering::Intersectable;
 use crate::vector3::Vector3;
 
 use image::*;
 use std::fmt;
-use std::fmt::Debug;
 use std::ops::{Add, Mul};
 
 #[derive(Debug, Copy, Clone)]
@@ -26,7 +25,7 @@ impl Color {
             (gamma_encode(self.red) * 255.0) as u8,
             (gamma_encode(self.green) * 255.0) as u8,
             (gamma_encode(self.blue) * 255.0) as u8,
-            0,
+            255,
         )
     }
     pub fn clamp(&self) -> Color {
@@ -42,22 +41,24 @@ impl Mul for Color {
     type Output = Color;
 
     fn mul(self, other: Color) -> Color {
-        Color {
+        let c = Color {
             red: self.red * other.red,
             blue: self.blue * other.blue,
             green: self.green * other.green,
-        }
+        };
+        c
     }
 }
 impl Mul<f32> for Color {
     type Output = Color;
 
     fn mul(self, other: f32) -> Color {
-        Color {
+        let c = Color {
             red: self.red * other,
             blue: self.blue * other,
             green: self.green * other,
-        }
+        };
+        c
     }
 }
 impl Mul<Color> for f32 {
@@ -71,11 +72,12 @@ impl Add for Color {
     type Output = Color;
 
     fn add(self, other: Color) -> Color {
-        Color {
+        let c = Color {
             red: self.red + other.red,
             blue: self.blue + other.blue,
             green: self.green + other.green,
-        }
+        };
+        c
     }
 }
 
@@ -106,14 +108,43 @@ pub struct SphericalLight {
     pub color: Color,
     pub intensity: f32,
 }
-impl SphericalLight {
-    pub fn distance(&self, hit_point: &Point) -> f64 {
-        (self.position - *hit_point).length()
-    }
-}
+
 pub enum Light {
     Direct(DirectLight),
     Spherical(SphericalLight),
+}
+
+impl Light {
+    pub fn distance(&self, hit_point: &Point) -> f64 {
+        match self {
+            Light::Direct(l) => ::std::f64::INFINITY,
+            Light::Spherical(l) => (l.position - *hit_point).length(),
+        }
+    }
+
+    pub fn intensity(&self, hit_point: &Point) -> f32 {
+        match self {
+            Light::Direct(l) => l.intensity,
+            Light::Spherical(l) => {
+                let r2 = (l.position - *hit_point).norm() as f32;
+                l.intensity / (4.0 * ::std::f32::consts::PI * r2)
+            }
+        }
+    }
+
+    pub fn direction(&self, hit_point: &Point) -> Vector3 {
+        match self {
+            Light::Direct(l) => -l.direction.normalize(),
+            Light::Spherical(l) => (l.position - *hit_point).normalize(),
+        }
+    }
+
+    pub fn color(&self) -> Color {
+        match self {
+            Light::Direct(l) => l.color,
+            Light::Spherical(l) => l.color,
+        }
+    }
 }
 
 pub struct Scene {

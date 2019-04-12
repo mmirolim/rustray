@@ -1,14 +1,13 @@
 use crate::point::Point;
-use crate::scene::{Color, Light, Plane, Scene, Sphere};
+use crate::scene::{Color, Plane, Scene, Sphere};
 use crate::vector3::Vector3;
 use image::*;
 use std::fmt;
-use std::fmt::Debug;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread;
 
 pub fn render(scene: &Scene, start_width: u32, end_width: u32) -> DynamicImage {
-    let bg = Rgba::from_channels(125, 125, 125, 0);
+    let bg = Rgba::from_channels(35, 54, 84, 0);
     let mut image = DynamicImage::new_rgb8(end_width - start_width, scene.height);
     for x in start_width..end_width {
         let x_on_image = x - start_width;
@@ -24,55 +23,35 @@ pub fn render(scene: &Scene, start_width: u32, end_width: u32) -> DynamicImage {
                     green: 0.0,
                     blue: 0.0,
                 };
+
                 for light in &scene.lights {
-                    let light_color: Color;
-                    let direction_to_light: Vector3;
-                    let mut light_intensity: f32;
-
-                    match light {
-                        Light::Direct(light) => {
-                            light_color = light.color;
-                            light_intensity = light.intensity;
-                            direction_to_light = -light.direction.normalize();
-                        }
-
-                        Light::Spherical(light) => {
-                            light_color = light.color;
-                            let r2 = (light.position - hit_point).norm() as f32;
-                            light_intensity = light.intensity / (4.0 * ::std::f32::consts::PI * r2);
-                            direction_to_light = (light.position - hit_point).normalize();
-                        }
-                    };
+                    let direction_to_light = light.direction(&hit_point);
 
                     let shadow_ray = Ray {
-                        origin: hit_point + (surface_normal * 1e-13),
+                        origin: hit_point + (surface_normal),
                         direction: direction_to_light,
                     };
-                    let shadow_intersection = scene.trace(&shadow_ray);
-                    match light {
-                        Light::Direct(light) => {
-                            if shadow_intersection.is_some() {
-                                light_intensity = 0.0;
-                            }
-                        }
 
-                        Light::Spherical(light) => {
-                            if shadow_intersection.is_some()
-                                && shadow_intersection.unwrap().distance
-                                    < light.distance(&hit_point)
-                            {
-                                light_intensity = 0.0;
-                            }
-                        }
+                    let shadow_intersection = scene.trace(&shadow_ray);
+                    let isi = shadow_intersection.is_none();
+                    let sid = if isi {
+                        0.0
+                    } else {
+                        shadow_intersection.unwrap().distance
                     };
 
+                    let light_intensity = if isi || sid > light.distance(&hit_point) {
+                        light.intensity(&hit_point)
+                    } else {
+                        0.0
+                    };
                     let light_power =
                         (surface_normal.dot(&direction_to_light) as f32).max(0.0) * light_intensity;
 
-                    color = color + v.obj.color() * light_color * light_power * light_reflected;
+                    let light_color = light.color() * light_power * light_reflected;
+                    color = color + v.obj.color() * light_color;
                 }
 
-                // TODO clamp color?
                 image.put_pixel(x_on_image, y, color.clamp().to_rgba());
             } else {
                 image.put_pixel(x_on_image, y, bg);
@@ -136,15 +115,18 @@ impl Intersectable for Sphere {
 
         let d1 = (radius2 - d2).sqrt();
         let t0 = adj - d1;
-        let t1 = adj + d2;
+        let t1 = adj + d1;
 
         if t0 < 0.0 && t1 < 0.0 {
             return None;
+        } else if t0 < 0.0 {
+            Some(t1)
+        } else if t1 < 0.0 {
+            Some(t0)
+        } else {
+            let distance = if t0 < t1 { t0 } else { t1 };
+            Some(distance)
         }
-
-        let distance = if t0 < t1 { t0 } else { t1 };
-
-        Some(distance)
     }
 
     fn color(&self) -> Color {
@@ -181,7 +163,7 @@ impl Intersectable for Plane {
     }
 
     fn surface_normal(&self, _hit_point: &Point) -> Vector3 {
-        -self.normal.normalize()
+        -self.normal
     }
 
     fn albedo(&self) -> f32 {
@@ -216,6 +198,7 @@ impl Scene {
 }
 
 pub fn render_in_threads(scene: Scene, threads_num: u32) -> DynamicImage {
+    // TODO use randomized blocks to render scene
     let scene = Arc::new(scene);
     let mut image = DynamicImage::new_rgb8(scene.width, scene.height);
     let mut workers = vec![];
