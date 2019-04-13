@@ -85,10 +85,23 @@ impl Add for Color {
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
+    // store radius square
+    pub radius_sq: f64,
     pub color: Color,
     pub albedo: f32,
 }
 
+impl Sphere {
+    pub fn new(center: Point, radius: f64, color: Color, albedo: f32) -> Sphere {
+        Sphere {
+            center,
+            radius,
+            radius_sq: radius * radius,
+            color,
+            albedo,
+        }
+    }
+}
 #[derive(Debug)]
 pub struct Plane {
     pub center: Point,

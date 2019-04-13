@@ -33,14 +33,9 @@ pub fn render(scene: &Scene, start_width: u32, end_width: u32) -> DynamicImage {
                     };
 
                     let shadow_intersection = scene.trace(&shadow_ray);
-                    let isi = shadow_intersection.is_none();
-                    let sid = if isi {
-                        0.0
-                    } else {
-                        shadow_intersection.unwrap().distance
-                    };
-
-                    let light_intensity = if isi || sid > light.distance(&hit_point) {
+                    let light_intensity = if shadow_intersection.is_none()
+                        || shadow_intersection.unwrap().distance > light.distance(&hit_point)
+                    {
                         light.intensity(&hit_point)
                     } else {
                         0.0
@@ -108,12 +103,11 @@ impl Intersectable for Sphere {
         //Find the length-squared of the opposite side
         let d2 = l.dot(&l) - (adj * adj);
         //If that length-squared is less than radius squared, the ray intersects the sphere
-        let radius2 = self.radius * self.radius;
-        if d2 > radius2 {
+        if d2 > self.radius_sq {
             return None;
         }
 
-        let d1 = (radius2 - d2).sqrt();
+        let d1 = (self.radius_sq - d2).sqrt();
         let t0 = adj - d1;
         let t1 = adj + d1;
 
