@@ -84,7 +84,8 @@ impl Add for Color {
 #[derive(Debug)]
 pub struct SurfaceType {
     pub diffuse_albedo: f32,
-    pub reflect_ratio: f32, // TODO add refraction
+    pub reflect_ratio: f32,
+    pub refractive_index: f32,
 }
 
 #[derive(Debug)]

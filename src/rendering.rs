@@ -66,6 +66,37 @@ fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
             let light_color = light.color() * light_power * light_reflected;
             color = color + material.color * light_color;
         }
+    } else if material.surface_type.refractive_index > 0.0 {
+        let reflection_color: Color;
+        let mut refraction_color = Color {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.0,
+        };
+
+        let coeff_r = ray.fresnel(&surface_normal, 1.0, material.surface_type.refractive_index);
+        if coeff_r < 1.0 {
+            if let Some(dir) =
+                ray.refract(&surface_normal, 1.0, material.surface_type.refractive_index)
+            {
+                let refracted_ray = Ray {
+                    origin: if ray.direction.dot(&surface_normal) < 0.0 {
+                        hit_point + surface_normal
+                    } else {
+                        hit_point - surface_normal
+                    },
+
+                    direction: dir,
+                };
+                refraction_color = get_color(scene, &refracted_ray, depth + 1);
+            }
+        }
+        let reflected_ray = Ray {
+            origin: hit_point + (surface_normal),
+            direction: ray.reflect_direction(&surface_normal),
+        };
+        reflection_color = get_color(scene, &reflected_ray, depth + 1);
+        color = color + reflection_color * coeff_r + refraction_color * (1.0 - coeff_r);
     } else if material.surface_type.reflect_ratio > 0.0 {
         let reflected_ray = Ray {
             origin: hit_point + (surface_normal),
@@ -116,6 +147,60 @@ impl Ray {
     pub fn reflect_direction(&self, normal: &Vector3) -> Vector3 {
         let normal = normal.normalize();
         (self.direction - 2.0 * self.direction.dot(&normal) * normal).normalize()
+    }
+
+    pub fn refract(&self, normal: &Vector3, mut ior_from: f32, mut ior_to: f32) -> Option<Vector3> {
+        let mut normal = normal.normalize();
+        // cos theta
+        let mut cosi = normal.dot(&self.direction) as f32;
+
+        if cosi < 0.0 {
+            // hit from outside of surface
+            cosi = -cosi;
+        } else {
+            // we are inside the surface
+            normal = -normal;
+            // swap the refraction indices
+            let tmp = ior_from;
+            ior_from = ior_to;
+            ior_to = tmp;
+        }
+
+        // n = n1/n2
+        let eta = ior_from / ior_to;
+
+        let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+        if k < 0.0 {
+            // total internal reflection
+            return None;
+        }
+
+        Some(eta * self.direction + (eta * cosi - k.sqrt()) * normal)
+    }
+
+    // returns coeff of reflected light
+    fn fresnel(&self, normal: &Vector3, mut ior_from: f32, mut ior_to: f32) -> f32 {
+        let mut cosi = self.direction.dot(normal).min(1.0).max(-1.0) as f32;
+        if cosi > 0.0 {
+            // swap the refraction indices
+            let tmp = ior_from;
+            ior_from = ior_to;
+            ior_to = tmp;
+        }
+        let eta = ior_from / ior_to;
+        let sint = eta * (1.0 - cosi * cosi).max(0.0).sqrt();
+
+        if sint >= 1.0 {
+            // total internal reflection
+            return 1.0;
+        }
+
+        let cost = (1.0 - sint * sint).max(0.0).sqrt();
+        cosi = cosi.abs();
+        let r1 = (ior_to * cosi - ior_from * cost) / (ior_to * cosi + ior_from * cost);
+        let r2 = (ior_from * cost - ior_to * cosi) / (ior_from * cost + ior_from * cosi);
+
+        (r1 * r1 + r2 * r2) / 2.0
     }
 }
 

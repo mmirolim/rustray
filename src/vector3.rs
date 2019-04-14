@@ -91,6 +91,27 @@ impl Mul<Vector3> for f64 {
     }
 }
 
+impl Mul<f32> for Vector3 {
+    type Output = Vector3;
+
+    fn mul(self, other: f32) -> Vector3 {
+        let other = other as f64;
+        Vector3 {
+            x: self.x * other,
+            y: self.y * other,
+            z: self.z * other,
+        }
+    }
+}
+
+impl Mul<Vector3> for f32 {
+    type Output = Vector3;
+
+    fn mul(self, other: Vector3) -> Vector3 {
+        other * self
+    }
+}
+
 impl Neg for Vector3 {
     type Output = Vector3;
 

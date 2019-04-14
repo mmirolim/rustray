@@ -66,8 +66,9 @@ fn test_can_render_scene() {
                         blue: 0.0,
                     },
                     surface_type: SurfaceType {
-                        diffuse_albedo: 0.3,
+                        diffuse_albedo: 0.0,
                         reflect_ratio: 0.0,
+                        refractive_index: 1.3,
                     },
                 },
             )),
@@ -87,6 +88,7 @@ fn test_can_render_scene() {
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.3,
                         reflect_ratio: 0.0,
+                        refractive_index: 0.0,
                     },
                 },
             )),
@@ -106,6 +108,7 @@ fn test_can_render_scene() {
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.18,
                         reflect_ratio: 0.0,
+                        refractive_index: 0.0,
                     },
                 },
             )),
@@ -127,8 +130,9 @@ fn test_can_render_scene() {
                         blue: 0.5,
                     },
                     surface_type: SurfaceType {
-                        diffuse_albedo: 0.0,
-                        reflect_ratio: 0.8,
+                        diffuse_albedo: 0.18,
+                        reflect_ratio: 0.0,
+                        refractive_index: 0.0,
                     },
                 },
             }),
