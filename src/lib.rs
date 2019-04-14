@@ -17,7 +17,12 @@ fn test_can_render_scene() {
     let scene = Scene {
         width: 800,
         height: 600,
-        fov: 90.0,
+        fov: 95.0,
+        bg_color: Color {
+            red: 0.2,
+            blue: 0.8,
+            green: 0.6,
+        },
         lights: vec![
             Light::Direct(DirectLight {
                 color: Color {
@@ -54,12 +59,17 @@ fn test_can_render_scene() {
                     z: -8.0,
                 },
                 1.5,
-                Color {
-                    red: 0.0,
-                    green: 1.0,
-                    blue: 0.0,
+                Material {
+                    color: Color {
+                        red: 0.0,
+                        green: 1.0,
+                        blue: 0.0,
+                    },
+                    surface_type: SurfaceType {
+                        diffuse_albedo: 0.3,
+                        reflect_ratio: 0.0,
+                    },
                 },
-                0.18,
             )),
             Box::new(Sphere::new(
                 Point {
@@ -68,12 +78,17 @@ fn test_can_render_scene() {
                     z: -7.0,
                 },
                 2.0,
-                Color {
-                    red: 0.0,
-                    green: 0.0,
-                    blue: 1.0,
+                Material {
+                    color: Color {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 1.0,
+                    },
+                    surface_type: SurfaceType {
+                        diffuse_albedo: 0.3,
+                        reflect_ratio: 0.0,
+                    },
                 },
-                0.3,
             )),
             Box::new(Sphere::new(
                 Point {
@@ -82,12 +97,17 @@ fn test_can_render_scene() {
                     z: -5.0,
                 },
                 2.0,
-                Color {
-                    red: 1.0,
-                    green: 0.0,
-                    blue: 0.0,
+                Material {
+                    color: Color {
+                        red: 1.0,
+                        green: 0.0,
+                        blue: 0.0,
+                    },
+                    surface_type: SurfaceType {
+                        diffuse_albedo: 0.18,
+                        reflect_ratio: 0.0,
+                    },
                 },
-                0.18,
             )),
             Box::new(Plane {
                 normal: Vector3 {
@@ -100,12 +120,17 @@ fn test_can_render_scene() {
                     y: -3.0,
                     z: 0.0,
                 },
-                color: Color {
-                    red: 1.0,
-                    green: 0.5,
-                    blue: 0.5,
+                material: Material {
+                    color: Color {
+                        red: 1.0,
+                        green: 0.5,
+                        blue: 0.5,
+                    },
+                    surface_type: SurfaceType {
+                        diffuse_albedo: 0.0,
+                        reflect_ratio: 0.8,
+                    },
                 },
-                albedo: 0.18,
             }),
         ],
     };

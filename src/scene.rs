@@ -82,23 +82,33 @@ impl Add for Color {
 }
 
 #[derive(Debug)]
+pub struct SurfaceType {
+    pub diffuse_albedo: f32,
+    pub reflect_ratio: f32, // TODO add refraction
+}
+
+#[derive(Debug)]
+pub struct Material {
+    pub color: Color,
+    pub surface_type: SurfaceType,
+}
+
+#[derive(Debug)]
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
     // store radius square
     pub radius_sq: f64,
-    pub color: Color,
-    pub albedo: f32,
+    pub material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, color: Color, albedo: f32) -> Sphere {
+    pub fn new(center: Point, radius: f64, material: Material) -> Sphere {
         Sphere {
             center,
             radius,
             radius_sq: radius * radius,
-            color,
-            albedo,
+            material,
         }
     }
 }
@@ -106,8 +116,7 @@ impl Sphere {
 pub struct Plane {
     pub center: Point,
     pub normal: Vector3,
-    pub color: Color,
-    pub albedo: f32,
+    pub material: Material,
 }
 
 pub struct DirectLight {
@@ -130,7 +139,7 @@ pub enum Light {
 impl Light {
     pub fn distance(&self, hit_point: &Point) -> f64 {
         match self {
-            Light::Direct(l) => ::std::f64::INFINITY,
+            Light::Direct(_) => ::std::f64::INFINITY,
             Light::Spherical(l) => (l.position - *hit_point).length(),
         }
     }
@@ -166,6 +175,7 @@ pub struct Scene {
     pub fov: f64,
     pub objects: Vec<Box<dyn Intersectable + Sync + Send>>,
     pub lights: Vec<Light>,
+    pub bg_color: Color,
 }
 
 impl fmt::Debug for Scene {

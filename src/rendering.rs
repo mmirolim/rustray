@@ -1,5 +1,5 @@
 use crate::point::Point;
-use crate::scene::{Color, Plane, Scene, Sphere};
+use crate::scene::{Color, Material, Plane, Scene, Sphere};
 use crate::vector3::Vector3;
 use image::*;
 use std::fmt;
@@ -7,61 +7,81 @@ use std::sync::Arc;
 use std::thread;
 
 pub fn render(scene: &Scene, start_width: u32, end_width: u32) -> DynamicImage {
-    let bg = Rgba::from_channels(35, 54, 84, 0);
     let mut image = DynamicImage::new_rgb8(end_width - start_width, scene.height);
     for x in start_width..end_width {
         let x_on_image = x - start_width;
         for y in 0..scene.height {
             let ray = Ray::create_prime(x, y, scene);
-
-            if let Some(v) = scene.trace(&ray) {
-                let hit_point = ray.origin + (ray.direction * v.distance);
-                let surface_normal = v.obj.surface_normal(&hit_point);
-                let light_reflected = v.obj.albedo() / std::f32::consts::PI;
-                let mut color = Color {
-                    red: 0.0,
-                    green: 0.0,
-                    blue: 0.0,
-                };
-
-                for light in &scene.lights {
-                    let direction_to_light = light.direction(&hit_point);
-
-                    let shadow_ray = Ray {
-                        origin: hit_point + (surface_normal),
-                        direction: direction_to_light,
-                    };
-
-                    let shadow_intersection = scene.trace(&shadow_ray);
-                    let light_intensity = if shadow_intersection.is_none()
-                        || shadow_intersection.unwrap().distance > light.distance(&hit_point)
-                    {
-                        light.intensity(&hit_point)
-                    } else {
-                        0.0
-                    };
-                    let light_power =
-                        (surface_normal.dot(&direction_to_light) as f32).max(0.0) * light_intensity;
-
-                    let light_color = light.color() * light_power * light_reflected;
-                    color = color + v.obj.color() * light_color;
-                }
-
-                image.put_pixel(x_on_image, y, color.clamp().to_rgba());
-            } else {
-                image.put_pixel(x_on_image, y, bg);
-            }
+            image.put_pixel(x_on_image, y, get_color(scene, &ray, 0).to_rgba());
         }
     }
 
     image
 }
 
+fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
+    let mut color = Color {
+        red: 0.0,
+        blue: 0.0,
+        green: 0.0,
+    };
+    // max depth
+    if depth > 5 {
+        return scene.bg_color;
+    }
+
+    let material: &Material;
+    let hit_point: Point;
+    let surface_normal: Vector3;
+
+    if let Some(v) = scene.trace(&ray) {
+        material = v.obj.material();
+        hit_point = ray.origin + (ray.direction * v.distance);
+        surface_normal = v.obj.surface_normal(&hit_point);
+    } else {
+        return scene.bg_color;
+    }
+
+    if material.surface_type.diffuse_albedo > 0.0 {
+        let light_reflected = material.surface_type.diffuse_albedo / std::f32::consts::PI;
+        for light in &scene.lights {
+            let direction_to_light = light.direction(&hit_point);
+
+            let shadow_ray = Ray {
+                origin: hit_point + (surface_normal),
+                direction: direction_to_light,
+            };
+
+            let shadow_intersection = scene.trace(&shadow_ray);
+            let light_intensity = if shadow_intersection.is_none()
+                || shadow_intersection.unwrap().distance > light.distance(&hit_point)
+            {
+                light.intensity(&hit_point)
+            } else {
+                0.0
+            };
+            let light_power =
+                (surface_normal.dot(&direction_to_light) as f32).max(0.0) * light_intensity;
+
+            let light_color = light.color() * light_power * light_reflected;
+            color = color + material.color * light_color;
+        }
+    } else if material.surface_type.reflect_ratio > 0.0 {
+        let reflected_ray = Ray {
+            origin: hit_point + (surface_normal),
+            direction: ray.reflect_direction(&surface_normal),
+        };
+        color = color
+            + material.surface_type.reflect_ratio * get_color(scene, &reflected_ray, depth + 1);
+    }
+
+    color.clamp()
+}
+
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<f64>;
-    fn color(&self) -> Color;
     fn surface_normal(&self, hit_point: &Point) -> Vector3;
-    fn albedo(&self) -> f32;
+    fn material(&self) -> &Material;
 }
 
 pub struct Ray {
@@ -90,6 +110,12 @@ impl Ray {
             }
             .normalize(),
         }
+    }
+
+    // returns reflection direction
+    pub fn reflect_direction(&self, normal: &Vector3) -> Vector3 {
+        let normal = normal.normalize();
+        (self.direction - 2.0 * self.direction.dot(&normal) * normal).normalize()
     }
 }
 
@@ -123,16 +149,12 @@ impl Intersectable for Sphere {
         }
     }
 
-    fn color(&self) -> Color {
-        self.color
-    }
-
     fn surface_normal(&self, hit_point: &Point) -> Vector3 {
         (*hit_point - self.center).normalize()
     }
 
-    fn albedo(&self) -> f32 {
-        self.albedo
+    fn material(&self) -> &Material {
+        &self.material
     }
 }
 
@@ -152,16 +174,12 @@ impl Intersectable for Plane {
         None
     }
 
-    fn color(&self) -> Color {
-        self.color
-    }
-
     fn surface_normal(&self, _hit_point: &Point) -> Vector3 {
         -self.normal
     }
 
-    fn albedo(&self) -> f32 {
-        self.albedo
+    fn material(&self) -> &Material {
+        &self.material
     }
 }
 
