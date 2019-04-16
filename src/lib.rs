@@ -20,11 +20,11 @@ fn test_can_render_scene() {
     let scene = Scene {
         width: 800,
         height: 600,
-        fov: 70.0,
+        fov: 90.0,
         bg_color: Color {
-            red: 0.2,
-            blue: 0.8,
-            green: 0.6,
+            red: 0.01,
+            green: 0.02,
+            blue: 0.05,
         },
         lights: vec![
             Light::Direct(DirectLight {
@@ -77,8 +77,8 @@ fn test_can_render_scene() {
             )),
             Box::new(Sphere::new(
                 Point {
-                    x: -3.5,
-                    y: 2.0,
+                    x: -3.6,
+                    y: 1.5,
                     z: -7.0,
                 },
                 2.0,
@@ -94,7 +94,7 @@ fn test_can_render_scene() {
             Box::new(Sphere::new(
                 Point {
                     x: 2.0,
-                    y: 2.0,
+                    y: 1.7,
                     z: -5.0,
                 },
                 2.0,
@@ -105,9 +105,9 @@ fn test_can_render_scene() {
                         blue: 0.0,
                     }),
                     surface_type: SurfaceType {
-                        diffuse_albedo: 0.18,
+                        diffuse_albedo: 0.0,
                         reflect_ratio: 0.0,
-                        refractive_index: 0.0,
+                        refractive_index: 1.5,
                     },
                 },
             )),
@@ -126,7 +126,7 @@ fn test_can_render_scene() {
                     color: ColorType::Texture(image::open("chessboard.png").unwrap()),
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.18,
-                        reflect_ratio: 0.0,
+                        reflect_ratio: 0.5,
                         refractive_index: 0.0,
                     },
                 },

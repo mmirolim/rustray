@@ -69,7 +69,9 @@ fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
             let light_color = light.color() * light_power * light_reflected;
             color = color + material.color(&texture_coords) * light_color;
         }
-    } else if material.surface_type.refractive_index > 0.0 {
+    }
+
+    if material.surface_type.refractive_index > 0.0 {
         let reflection_color: Color;
         let mut refraction_color = Color {
             red: 0.0,
