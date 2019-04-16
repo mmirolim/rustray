@@ -1,7 +1,8 @@
 use crate::point::Point;
-use crate::scene::{Color, Material, Plane, Scene, Sphere};
+use crate::scene::{Color, Material, Plane, Scene, Sphere, TextureCoords};
 use crate::vector3::Vector3;
 use image::*;
+use std::f32;
 use std::fmt;
 use std::sync::Arc;
 use std::thread;
@@ -33,11 +34,13 @@ fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
     let material: &Material;
     let hit_point: Point;
     let surface_normal: Vector3;
+    let texture_coords: TextureCoords;
 
     if let Some(v) = scene.trace(&ray) {
         material = v.obj.material();
         hit_point = ray.origin + (ray.direction * v.distance);
         surface_normal = v.obj.surface_normal(&hit_point);
+        texture_coords = v.obj.texture_coords(&hit_point);
     } else {
         return scene.bg_color;
     }
@@ -64,7 +67,7 @@ fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
                 (surface_normal.dot(&direction_to_light) as f32).max(0.0) * light_intensity;
 
             let light_color = light.color() * light_power * light_reflected;
-            color = color + material.color * light_color;
+            color = color + material.color(&texture_coords) * light_color;
         }
     } else if material.surface_type.refractive_index > 0.0 {
         let reflection_color: Color;
@@ -111,8 +114,9 @@ fn get_color(scene: &Scene, ray: &Ray, depth: u32) -> Color {
 
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<f64>;
-    fn surface_normal(&self, hit_point: &Point) -> Vector3;
+    fn surface_normal(&self, point: &Point) -> Vector3;
     fn material(&self) -> &Material;
+    fn texture_coords(&self, point: &Point) -> TextureCoords;
 }
 
 pub struct Ray {
@@ -241,6 +245,14 @@ impl Intersectable for Sphere {
     fn material(&self) -> &Material {
         &self.material
     }
+
+    fn texture_coords(&self, point: &Point) -> TextureCoords {
+        let vec_to_point = *point - self.center;
+        TextureCoords {
+            x: (1.0 + (vec_to_point.z.atan2(vec_to_point.x) as f32) / f32::consts::PI) * 0.5,
+            y: (vec_to_point.y / self.radius).acos() as f32 / f32::consts::PI,
+        }
+    }
 }
 
 impl Intersectable for Plane {
@@ -265,6 +277,32 @@ impl Intersectable for Plane {
 
     fn material(&self) -> &Material {
         &self.material
+    }
+    fn texture_coords(&self, point: &Point) -> TextureCoords {
+        let formard_vec = Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        };
+        let up_vec = Vector3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        };
+
+        let mut x_axis = self.normal.cross(&formard_vec);
+        if x_axis.length() == 0.0 {
+            x_axis = self.normal.cross(&up_vec);
+        }
+
+        let y_axis = self.normal.cross(&x_axis);
+
+        let vec_to_point = *point - self.center;
+
+        TextureCoords {
+            x: vec_to_point.dot(&x_axis) as f32,
+            y: vec_to_point.dot(&y_axis) as f32,
+        }
     }
 }
 

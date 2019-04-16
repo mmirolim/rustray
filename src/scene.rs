@@ -28,6 +28,13 @@ impl Color {
             255,
         )
     }
+    pub fn from_rgba(rgba: Rgba<u8>) -> Color {
+        Color {
+            red: (rgba.data[0] as f32) / 255.0,
+            green: (rgba.data[1] as f32) / 255.0,
+            blue: (rgba.data[2] as f32) / 255.0,
+        }
+    }
     pub fn clamp(&self) -> Color {
         Color {
             red: self.red.min(1.0).max(0.0),
@@ -82,19 +89,62 @@ impl Add for Color {
 }
 
 #[derive(Debug)]
+pub struct TextureCoords {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Debug)]
 pub struct SurfaceType {
     pub diffuse_albedo: f32,
     pub reflect_ratio: f32,
     pub refractive_index: f32,
 }
 
-#[derive(Debug)]
+pub enum ColorType {
+    Color(Color),
+    Texture(DynamicImage),
+}
+
+impl ColorType {
+    pub fn color(&self, coords: &TextureCoords) -> Color {
+        match *self {
+            ColorType::Color(c) => Color {
+                red: c.red,
+                green: c.green,
+                blue: c.blue,
+            },
+            ColorType::Texture(ref tex) => {
+                let tex_x = wrap(coords.x, tex.width());
+                let tex_y = wrap(coords.y, tex.height());
+                Color::from_rgba(tex.get_pixel(tex_x, tex_y))
+            }
+        }
+    }
+}
+
 pub struct Material {
-    pub color: Color,
+    pub color: ColorType,
     pub surface_type: SurfaceType,
 }
 
-#[derive(Debug)]
+impl Material {
+    pub fn color(&self, coords: &TextureCoords) -> Color {
+        self.color.color(coords)
+    }
+}
+
+fn wrap(val: f32, bound: u32) -> u32 {
+    let signed_bound = bound as i32;
+    let float_coord = val * bound as f32;
+    let wrapped_coord = (float_coord as i32) % signed_bound;
+    if wrapped_coord < 0 {
+        (wrapped_coord + signed_bound) as u32
+    } else {
+        wrapped_coord as u32
+    }
+}
+
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
@@ -113,7 +163,7 @@ impl Sphere {
         }
     }
 }
-#[derive(Debug)]
+
 pub struct Plane {
     pub center: Point,
     pub normal: Vector3,

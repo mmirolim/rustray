@@ -8,7 +8,10 @@ pub mod vector3;
 use image::*;
 use point::*;
 use rendering::*;
-use scene::*;
+use scene::{
+    Color, ColorType, DirectLight, Light, Material, Plane, Scene, Sphere, SphericalLight,
+    SurfaceType,
+};
 use std::time::SystemTime;
 use vector3::*;
 
@@ -17,7 +20,7 @@ fn test_can_render_scene() {
     let scene = Scene {
         width: 800,
         height: 600,
-        fov: 95.0,
+        fov: 70.0,
         bg_color: Color {
             red: 0.2,
             blue: 0.8,
@@ -55,36 +58,32 @@ fn test_can_render_scene() {
             Box::new(Sphere::new(
                 Point {
                     x: -0.5,
-                    y: 0.0,
-                    z: -8.0,
+                    y: 0.5,
+                    z: -8.5,
                 },
                 1.5,
                 Material {
-                    color: Color {
+                    color: ColorType::Color(Color {
                         red: 0.0,
                         green: 1.0,
                         blue: 0.0,
-                    },
+                    }),
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.0,
-                        reflect_ratio: 0.0,
-                        refractive_index: 1.3,
+                        reflect_ratio: 0.7,
+                        refractive_index: 0.0,
                     },
                 },
             )),
             Box::new(Sphere::new(
                 Point {
-                    x: 3.5,
-                    y: 0.0,
+                    x: -3.5,
+                    y: 2.0,
                     z: -7.0,
                 },
                 2.0,
                 Material {
-                    color: Color {
-                        red: 0.0,
-                        green: 0.0,
-                        blue: 1.0,
-                    },
+                    color: ColorType::Texture(image::open("chessboard.png").unwrap()),
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.3,
                         reflect_ratio: 0.0,
@@ -100,11 +99,11 @@ fn test_can_render_scene() {
                 },
                 2.0,
                 Material {
-                    color: Color {
+                    color: ColorType::Color(Color {
                         red: 1.0,
                         green: 0.0,
                         blue: 0.0,
-                    },
+                    }),
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.18,
                         reflect_ratio: 0.0,
@@ -124,11 +123,7 @@ fn test_can_render_scene() {
                     z: 0.0,
                 },
                 material: Material {
-                    color: Color {
-                        red: 1.0,
-                        green: 0.5,
-                        blue: 0.5,
-                    },
+                    color: ColorType::Texture(image::open("chessboard.png").unwrap()),
                     surface_type: SurfaceType {
                         diffuse_albedo: 0.18,
                         reflect_ratio: 0.0,
